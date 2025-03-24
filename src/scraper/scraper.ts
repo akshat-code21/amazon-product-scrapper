@@ -15,7 +15,8 @@ export default async function scrapeData(productLink : string){
         const totalDiscountSelector = "span.savingsPercentage"
         const featureUl = "#feature-bullets > ul"
         const tableSelector = "#productDetails_techSpec_section_1"
-        const thumbnailsSelector = "#altImages .item"; 
+        const thumbnailsSelector = "#altImages .item";
+        const manufacturerImagesSelector = "#aplus img, .apm-flex img, .apm-flex-item-third-width img, .apm-text-center img, .a-spacing-mini img";
         const summarySelector = "#product-summary > p.a-spacing-small > span";
         await page.waitForSelector(titleSelector);
         await page.waitForSelector(ratingSelector)
@@ -25,6 +26,7 @@ export default async function scrapeData(productLink : string){
         await page.waitForSelector(featureUl)
         await page.waitForSelector(tableSelector)
         await page.waitForSelector(thumbnailsSelector);
+        await page.waitForSelector(manufacturerImagesSelector);
         await page.waitForSelector(summarySelector);
         const title = await page.$eval(titleSelector, (element) => element.textContent?.trim());
         const rating = await page.$eval(ratingSelector,(element)=>element.previousElementSibling.textContent?.trim())
@@ -45,9 +47,7 @@ export default async function scrapeData(productLink : string){
                 );
                 
                 if (label && value) {
-                    // Remove any special characters from label
                     const cleanLabel = label.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-                    // @ts-ignore
                     specs[cleanLabel] = value;
                 }
             });
@@ -60,7 +60,32 @@ export default async function scrapeData(productLink : string){
                 return img ? img.getAttribute('src') : null;
             }).filter(url => url !== null);
         });
+
+        const highResImageUrls = thumbnailUrls.map(url => {
+            if (url) {
+                return url.replace(/\._[^\.]+_\./, '.'); 
+            }
+            return null;
+        }).filter(Boolean);
+
         const summaryReview = await page.$eval(summarySelector,(element)=>element.textContent.trim());
+        const manufacturerImages = await page.$$eval(manufacturerImagesSelector, (images) => {
+            return images.map(img => {
+                let src = img.getAttribute('data-src') || img.getAttribute('src');                
+                if (src && 
+                    !src.includes('sprite') && 
+                    !src.includes('icon') && 
+                    !src.includes('grey-pixel.gif') && 
+                    !src.includes('amazon-avatars-global') && 
+                    !src.includes('default.png')) {
+                    if (src.includes('amazon.com/images')) {
+                        src = src.replace(/\._[^\.]+_\./, '.');
+                    }
+                    return src;
+                }
+                return null;
+            }).filter(url => url !== null);
+        });
         console.log('Title:', title);
         console.log('rating:', rating);
         console.log('numberOfRatings:', numberOfRatings);
@@ -69,7 +94,9 @@ export default async function scrapeData(productLink : string){
         console.log('Features:', LiS);
         console.log('Technical Details:', JSON.stringify(techDetails, null, 2));
         console.log('Thumbnail Images:', thumbnailUrls);
+        console.log('High Resolution Images:', highResImageUrls);
         console.log('summaryReview:', summaryReview);
+        console.log('Manufacturer Images:', manufacturerImages);
     } catch (error) {
         console.error(error);
     }
