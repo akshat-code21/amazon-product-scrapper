@@ -3,9 +3,10 @@ import scrapeData from "scraper/scraper";
 export default async function getProductDetails(req:Request,res:Response){
     try{
         const {productLink}  = req.body;
-        await scrapeData(productLink);
+        const productDetails = await scrapeData(productLink);
         res.json({
-            success : true
+            success : true,
+            productDetails
         })
     }catch(e){
         res.status(404).json({
