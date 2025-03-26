@@ -83,7 +83,7 @@ export default async function scrapeData(productLink: string): Promise<ProductDe
     let browser: puppeteer.Browser | null = null;
     
     try {
-        browser = await puppeteer.launch({ headless: false });
+        browser = await puppeteer.launch({ headless: "new" });
         const page = await browser.newPage();
         await page.setViewport({ width: 1080, height: 1024 });
         await page.goto(productLink);
